@@ -1,0 +1,34 @@
+{
+    "name": "VRControls",
+    "maps": [
+        {
+            "name": "VRController",
+            "id": "072db05d-51c6-4a2d-bd31-3692e94419f4",
+            "actions": [
+                {
+                    "name": "Calibrate",
+                    "type": "Button",
+                    "id": "bec1c18c-1149-4f59-b85a-7ba13cc9056b",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "a3929394-c1e9-4271-acbd-c18d43b14f55",
+                    "path": "<XRController>{LeftHand}/{PrimaryButton}",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Calibrate",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}
