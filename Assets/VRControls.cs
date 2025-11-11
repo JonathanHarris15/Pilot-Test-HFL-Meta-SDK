@@ -99,17 +99,37 @@ public partial class @VRControls: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Record"",
+                    ""type"": ""Button"",
+                    ""id"": ""66410bdd-a1f1-48d9-a5b6-76a67624ea7f"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
                 {
                     ""name"": """",
                     ""id"": ""a3929394-c1e9-4271-acbd-c18d43b14f55"",
-                    ""path"": ""<XRController>{LeftHand}/{PrimaryButton}"",
+                    ""path"": ""<KHRSimpleController>{LeftHand}/select"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
                     ""action"": ""Calibrate"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""ea6a9aaa-bc9e-4ad4-af8d-dee984e297dc"",
+                    ""path"": ""<KHRSimpleController>{LeftHand}/menu"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Record"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -121,6 +141,7 @@ public partial class @VRControls: IInputActionCollection2, IDisposable
         // VRController
         m_VRController = asset.FindActionMap("VRController", throwIfNotFound: true);
         m_VRController_Calibrate = m_VRController.FindAction("Calibrate", throwIfNotFound: true);
+        m_VRController_Record = m_VRController.FindAction("Record", throwIfNotFound: true);
     }
 
     ~@VRControls()
@@ -202,6 +223,7 @@ public partial class @VRControls: IInputActionCollection2, IDisposable
     private readonly InputActionMap m_VRController;
     private List<IVRControllerActions> m_VRControllerActionsCallbackInterfaces = new List<IVRControllerActions>();
     private readonly InputAction m_VRController_Calibrate;
+    private readonly InputAction m_VRController_Record;
     /// <summary>
     /// Provides access to input actions defined in input action map "VRController".
     /// </summary>
@@ -217,6 +239,10 @@ public partial class @VRControls: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "VRController/Calibrate".
         /// </summary>
         public InputAction @Calibrate => m_Wrapper.m_VRController_Calibrate;
+        /// <summary>
+        /// Provides access to the underlying input action "VRController/Record".
+        /// </summary>
+        public InputAction @Record => m_Wrapper.m_VRController_Record;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -246,6 +272,9 @@ public partial class @VRControls: IInputActionCollection2, IDisposable
             @Calibrate.started += instance.OnCalibrate;
             @Calibrate.performed += instance.OnCalibrate;
             @Calibrate.canceled += instance.OnCalibrate;
+            @Record.started += instance.OnRecord;
+            @Record.performed += instance.OnRecord;
+            @Record.canceled += instance.OnRecord;
         }
 
         /// <summary>
@@ -260,6 +289,9 @@ public partial class @VRControls: IInputActionCollection2, IDisposable
             @Calibrate.started -= instance.OnCalibrate;
             @Calibrate.performed -= instance.OnCalibrate;
             @Calibrate.canceled -= instance.OnCalibrate;
+            @Record.started -= instance.OnRecord;
+            @Record.performed -= instance.OnRecord;
+            @Record.canceled -= instance.OnRecord;
         }
 
         /// <summary>
@@ -307,5 +339,12 @@ public partial class @VRControls: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnCalibrate(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Record" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnRecord(InputAction.CallbackContext context);
     }
 }
