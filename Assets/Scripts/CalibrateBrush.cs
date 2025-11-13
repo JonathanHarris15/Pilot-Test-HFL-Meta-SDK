@@ -2,19 +2,22 @@ using System.Linq;
 using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEditor.ShaderGraph;
-using System.IO;
+// Removed UnityEditor.ShaderGraph and System.IO imports as they are unnecessary for this logic
+using System.IO; // Kept File access functions
 
 public class CalibrateBrush : MonoBehaviour
 {
+    //########## TIMING WINDOW VARIABLES ####################################
+    private const float COMBO_BUFFER_TIME = 0.1f; // Time in seconds to wait for the second button
+    private bool comboTriggered = false; // Flag to ensure combo only fires once
 
-//########## OBJECT REFERENCES ####################################
+    //########## OBJECT REFERENCES ####################################
     [SerializeField]
     private GameObject hand;
     [SerializeField]
     private GameObject hand_anchor;
 
-    [SerializeField] 
+    [SerializeField]
     private GameObject brush;
 
     [SerializeField]
@@ -25,9 +28,13 @@ public class CalibrateBrush : MonoBehaviour
     [SerializeField]
     private OVRSkeleton _skeleton;
 
-    private int bone_id = 10;
+    public int bone_id = 10;
 
-//########### EXPERIMENT SETTINGS ###################################
+    // Renamed for clarity: These track the *current physical state* of the buttons
+    private bool isCalibrateHeld = false;
+    private bool isRecordHeld = false;
+
+    //########### EXPERIMENT SETTINGS ###################################
 
     [Space]
     [Header("Experimental Controlls")]
@@ -51,7 +58,7 @@ public class CalibrateBrush : MonoBehaviour
     private string dataFilePath;
 
 
-//########### HELPER FUNCTIONS ###################################
+    //########### HELPER FUNCTIONS ###################################
 
     public void PerformCalibration()
     {
@@ -60,19 +67,15 @@ public class CalibrateBrush : MonoBehaviour
             Debug.LogWarning("Tracking dots are not assigned. Cannot calibrate.");
             return;
         }
-
-        Debug.Log("Calibrate button pressed!");
-        UnityEditor.Undo.RecordObject(this, "Calibrate Offset");
-        // 1. Get the world-space offset from the brush's origin to its tracking dot.
+        // UnityEditor.Undo.RecordObject(this, "Calibrate Offset"); // Only usable in the Editor
         Vector3 dotOffsetWorld = _tracking_dot_brush.transform.position - brush.transform.position;
 
-        // 2. Determine the target world position for the brush's origin.
         // (This is the finger's position MINUS that offset).
         Vector3 targetBrushWorldPos = _tracking_dot_finger.transform.position - dotOffsetWorld;
 
-        // 3. Convert this target world position into the parent's local space and store it.
         // We use InverseTransformPoint because we are converting a "point" in world space.
         brush_offset = brush.transform.parent.InverseTransformPoint(targetBrushWorldPos);
+        Debug.Log("Calibration Performed (Single Action)");
     }
 
     public void PerformRecording()
@@ -83,35 +86,159 @@ public class CalibrateBrush : MonoBehaviour
             return;
         }
 
+        // --- Existing Recording Logic ---
         float timestamp = Time.time;
         Vector3 position = _tracking_dot_brush.transform.position;
-
-        // 2. Format the data as a CSV line
         string dataLine = $"{timestamp},{position.x},{position.y},{position.z}\n";
-
-        // 3. Append this line to the file
         try
         {
             File.AppendAllText(dataFilePath, dataLine);
-            // Optional: Log to confirm, might be spammy
-            // Debug.Log($"Saved data: {dataLine}");
         }
         catch (Exception e)
         {
-            // Log an error if saving fails (e.g., disk full)
             Debug.LogError($"Failed to save data: {e.Message}");
         }
-
+        Debug.Log("Recording Performed (Single Action)");
     }
+
+    public void PerformComboAction()
+    {
+        if (hand_visible && brush_visible)
+        {
+            // State 1 (Both) -> State 2 (Brush Only)
+            hand_visible = false;
+            brush_visible = true;
+            Debug.Log("Combo Action: State 2 (Brush Only)");
+        }
+        else if (!hand_visible && brush_visible)
+        {
+            // State 2 (Brush Only) -> State 3 (Hand Only)
+            hand_visible = true;
+            brush_visible = false;
+            Debug.Log("Combo Action: State 3 (Hand Only)");
+        }
+        else if (hand_visible && !brush_visible)
+        {
+            // State 3 (Hand Only) -> State 4 (Neither)
+            hand_visible = false;
+            brush_visible = false;
+            Debug.Log("Combo Action: State 4 (Neither Visible)");
+        }
+        else
+        {
+            // State 4 (Neither) -> State 1 (Both)
+            hand_visible = true;
+            brush_visible = true;
+            Debug.Log("Combo Action: State 1 (Both Visible)");
+        }
+    }
+
+
+    //########### INPUT EVENT HANDLERS ###################################
+
+    // --- Calibration Button Logic ---
+
+    private void OnCalibratePressed(InputAction.CallbackContext context)
+    {
+        isCalibrateHeld = true;
+        comboTriggered = false;
+
+        if (isRecordHeld)
+        {
+            FireCombo();
+        }
+        else
+        {
+            // Calibrate pressed first, start the buffer
+            Invoke(nameof(ExecuteCalibrateAction), COMBO_BUFFER_TIME);
+        }
+    }
+
+    private void OnCalibrateReleased(InputAction.CallbackContext context)
+    {
+        isCalibrateHeld = false;
+        // When released, we can always cancel any pending single action
+        CancelInvoke(nameof(ExecuteCalibrateAction));
+    }
+
+    // --- Record Button Logic ---
+
+    private void OnRecordPressed(InputAction.CallbackContext context)
+    {
+        isRecordHeld = true;
+        comboTriggered = false;
+
+        if (isCalibrateHeld)
+        {
+            // If the other button is ALREADY held, fire combo immediately
+            FireCombo();
+        }
+        else
+        {
+            // Record pressed first, start the buffer
+            Invoke(nameof(ExecuteRecordAction), COMBO_BUFFER_TIME);
+        }
+    }
+
+    private void OnRecordReleased(InputAction.CallbackContext context)
+    {
+        isRecordHeld = false;
+        CancelInvoke(nameof(ExecuteRecordAction));
+    }
+
+    // --- Delayed Action Execution ---
+
+    private void ExecuteCalibrateAction()
+    {
+        if (isRecordHeld)
+        {
+            // Safety check: if Record was pressed at the very end of the buffer, fire combo
+            FireCombo();
+        }
+        else
+        {
+            _indexTipBone = _skeleton.Bones.FirstOrDefault(b => b.Id == (OVRSkeleton.BoneId)bone_id);
+            PerformCalibration();
+        }
+    }
+
+    private void ExecuteRecordAction()
+    {
+        if (isCalibrateHeld)
+        {
+            // Safety check: if Calibrate was pressed at the very end of the buffer, fire combo
+            FireCombo();
+        }
+        else
+        {
+            // The buffer expired, and the other button wasn't pressed
+            PerformRecording();
+        }
+    }
+
+    private void FireCombo()
+    {
+        if (comboTriggered) return;
+
+        comboTriggered = true;
+
+        // Immediately cancel any pending single actions
+        CancelInvoke(nameof(ExecuteCalibrateAction));
+        CancelInvoke(nameof(ExecuteRecordAction));
+
+        PerformComboAction();
+    }
+
+
+    //########### UNITY LIFECYCLE ###################################
 
     private void Awake()
     {
         _controls = new VRControls();
 
         string fileName = "brush_stroke_data.csv";
-        dataFilePath = Path.Combine("C:\\Users\\jonathan.h.1505\\Documents\\Pilot_Data_Collection", fileName);//TODO: THIS SHOULD BE CHANGED
+        dataFilePath = Path.Combine("C:\\Users\\jonathan.h.1505\\Documents\\Pilot_Data_Collection", fileName);
 
-        // Write a header row if the file doesn't exist yet
         if (!File.Exists(dataFilePath))
         {
             string header = "Timestamp,PositionX,PositionY,PositionZ\n";
@@ -120,36 +247,31 @@ public class CalibrateBrush : MonoBehaviour
 
         Debug.Log($"Data will be saved to: {dataFilePath}");
     }
+
     private void OnEnable()
     {
-        _controls.VRController.Calibrate.performed += OnCalibratePerformed;
-        _controls.VRController.Record.performed += OnRecordPerformed;
+        // Subscribing to started and canceled events
+        _controls.VRController.Calibrate.started += OnCalibratePressed;
+        _controls.VRController.Calibrate.canceled += OnCalibrateReleased;
+
+        _controls.VRController.Record.started += OnRecordPressed;
+        _controls.VRController.Record.canceled += OnRecordReleased;
+
         _controls.VRController.Enable();
     }
 
     private void OnDisable()
     {
         _controls.VRController.Disable();
-        _controls.VRController.Calibrate.performed -= OnCalibratePerformed;
+
+        // IMPORTANT: Use the correct event (started/canceled) for unsubscribing
+        _controls.VRController.Calibrate.started -= OnCalibratePressed;
+        _controls.VRController.Calibrate.canceled -= OnCalibrateReleased;
+
+        _controls.VRController.Record.started -= OnRecordPressed;
+        _controls.VRController.Record.canceled -= OnRecordReleased;
     }
 
-    private void OnCalibratePerformed(InputAction.CallbackContext context)
-    {
-        Debug.Log("Calibrate button pressed!");
-
-        PerformCalibration();
-
-    }
-
-    private void OnRecordPerformed(InputAction.CallbackContext context)
-    {
-        Debug.Log("Record button pressed!");
-
-        PerformRecording();
-    }
-
-
-//########### START & UPDATE ###################################
     private void Initialize()
     {
         _indexTipBone = _skeleton.Bones.FirstOrDefault(b => b.Id == (OVRSkeleton.BoneId)bone_id);
@@ -161,7 +283,7 @@ public class CalibrateBrush : MonoBehaviour
 
     void Update()
     {
-        if (hand == null || brush == null || _tracking_dot_finger == null || _indexTipBone == null || hand == null)
+        if (hand == null || brush == null || _tracking_dot_finger == null || _indexTipBone == null)
         {
             return;
         }
