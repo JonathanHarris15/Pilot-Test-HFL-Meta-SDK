@@ -1,5 +1,5 @@
 using UnityEngine;
-using UnityEditor; // We need this for custom editors
+using UnityEditor;
 
 [CustomEditor(typeof(CalibrateBrush))]
 public class CalibrateBrushEditor : Editor
@@ -12,6 +12,7 @@ public class CalibrateBrushEditor : Editor
 
         EditorGUILayout.Space(10);
 
+        // --- EXISTING CALIBRATION BUTTON ---
         GUI.backgroundColor = new Color(0.7f, 0.9f, 1.0f);
         if (GUILayout.Button("Run Calibration", GUILayout.Height(30)))
         {
@@ -19,8 +20,30 @@ public class CalibrateBrushEditor : Editor
         }
         GUI.backgroundColor = Color.white;
 
-        //fine-tuning buttons
+        // --- NEW SCANNING LOGIC ---
         EditorGUILayout.Space(5);
+
+        // This button changes based on whether the sweep is currently active
+        if (myScript.IsSweeping)
+        {
+            GUI.backgroundColor = Color.red; // Visual cue that we are in recording mode
+            if (GUILayout.Button("Collect Data", GUILayout.Height(40)))
+            {
+                myScript.PerformRecording();
+            }
+            GUI.backgroundColor = Color.white;
+        }
+        else
+        {
+            // Default state
+            if (GUILayout.Button("Start Scan", GUILayout.Height(40)))
+            {
+                myScript.StartScan();
+            }
+        }
+
+        // --- EXISTING FINE-TUNING CONTROLS ---
+        EditorGUILayout.Space(15);
         EditorGUILayout.LabelField("Fine Tune X-Axis Offset", EditorStyles.boldLabel);
 
         EditorGUILayout.BeginHorizontal();
@@ -41,5 +64,11 @@ public class CalibrateBrushEditor : Editor
 
         // Stop the horizontal layout
         EditorGUILayout.EndHorizontal();
+
+        // Ensure the editor updates during play mode so the button state switches automatically
+        if (Application.isPlaying)
+        {
+            Repaint();
+        }
     }
 }

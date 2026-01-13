@@ -50,15 +50,30 @@ public class CalibrateBrush : MonoBehaviour
     [Tooltip("The shift of the virtual hand from the users actual hand.")]
     public Vector3 hand_offset;
 
-    // --- NEW SETTING ---
     [Tooltip("The fixed rotation of the brush relative to the controller (in degrees).")]
     public Vector3 brush_rotation_offset;
-    // -------------------
 
     private Vector3 brush_offset;
-
     private string dataFilePath;
 
+    //########### SCANNING SETTINGS ###################################
+    [Space]
+    [Header("Scanning Automation")]
+    [Tooltip("World space position where the scan starts.")]
+    public Vector3 scanStart;
+
+    [Tooltip("World space position where the scan ends.")]
+    public Vector3 scanEnd;
+
+    [Tooltip("The rotation of the brush during the automated sweep.")]
+    public Vector3 sweepRotation;
+
+    [Tooltip("How long (in seconds) the sweep takes to complete.")]
+    public float sweepDuration = 5.0f;
+
+    // State tracking for the sweep
+    public bool IsSweeping { get; private set; } = false;
+    private float _sweepStartTime;
 
     //########### HELPER FUNCTIONS ###################################
 
@@ -70,13 +85,10 @@ public class CalibrateBrush : MonoBehaviour
             return;
         }
 
-        // 1. Calculate Position Offset (Existing Logic)
         Vector3 dotOffsetWorld = _tracking_dot_brush.transform.position - brush.transform.position;
         Vector3 targetBrushWorldPos = _tracking_dot_finger.transform.position - dotOffsetWorld;
 
-        // Convert world position to local position relative to the controller (parent)
         brush_offset = brush.transform.parent.InverseTransformPoint(targetBrushWorldPos);
-
         Debug.Log("Calibration Performed (Position Synced)");
     }
 
@@ -100,6 +112,15 @@ public class CalibrateBrush : MonoBehaviour
             Debug.LogError($"Failed to save data: {e.Message}");
         }
         Debug.Log("Recording Performed");
+    }
+
+    public void StartScan()
+    {
+        if (hand == null || brush == null) return;
+
+        IsSweeping = true;
+        _sweepStartTime = Time.time;
+        Debug.Log("Scan Started");
     }
 
     public void PerformComboAction()
@@ -241,21 +262,63 @@ public class CalibrateBrush : MonoBehaviour
             return;
         }
 
-        // 1. Hand Sync
+        // 1. Hand Sync (Always tracked)
         hand.transform.position = hand_anchor.transform.position + hand_offset;
         hand.transform.rotation = hand_anchor.transform.rotation;
 
-        // 2. Brush Position Sync (from Calibration)
-        brush.transform.localPosition = brush_offset;
+        // 2. Brush Logic (Tracked vs Sweeping)
+        if (IsSweeping)
+        {
+            float timeSinceStart = Time.time - _sweepStartTime;
+            float percentageComplete = timeSinceStart / sweepDuration;
 
-        // 3. Brush Rotation Sync
-        brush.transform.localRotation = Quaternion.Euler(brush_rotation_offset);
+            if (percentageComplete >= 1.0f)
+            {
+                // Sweep complete, reset to tracking
+                IsSweeping = false;
+                Debug.Log("Scan Complete");
+            }
+            else
+            {
+                // Perform Sweep Interpolation
+                brush.transform.position = Vector3.Lerp(scanStart, scanEnd, percentageComplete);
+                brush.transform.rotation = Quaternion.Euler(sweepRotation);
+            }
+        }
+        else
+        {
+            // Standard Hand Tracking
+            brush.transform.localPosition = brush_offset;
+            brush.transform.localRotation = Quaternion.Euler(brush_rotation_offset);
+        }
 
-        // 4. Tracking Dot Sync
+        // 3. Tracking Dot Sync
         _tracking_dot_finger.transform.position = _indexTipBone.Transform.position;
 
-        // 5. Visibility
+        // 4. Visibility
         hand.SetActive(hand_visible);
         brush.SetActive(brush_visible);
+    }
+
+    // --- VISUALIZATION: Gizmos for Scan Path ---
+    private void OnDrawGizmos()
+    {
+        // Draw Start Point (Green Sphere)
+        Gizmos.color = Color.green;
+        Gizmos.DrawSphere(scanStart, 0.02f);
+
+        // Draw End Point (Red Sphere)
+        Gizmos.color = Color.red;
+        Gizmos.DrawSphere(scanEnd, 0.02f);
+
+        // Draw Path (Yellow Line)
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawLine(scanStart, scanEnd);
+
+        // Optional: Draw text or smaller wire spheres if you want to see them through objects
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(scanStart, 0.03f);
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(scanEnd, 0.03f);
     }
 }
