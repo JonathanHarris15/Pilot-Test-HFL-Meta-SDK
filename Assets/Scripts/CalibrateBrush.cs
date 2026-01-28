@@ -9,6 +9,7 @@ public class CalibrateBrush : MonoBehaviour
     //########## TIMING WINDOW VARIABLES ####################################
     private const float COMBO_BUFFER_TIME = 0.1f;
     private bool comboTriggered = false;
+    private bool measured = false;
 
     //########## OBJECT REFERENCES ####################################
     [SerializeField]
@@ -38,6 +39,8 @@ public class CalibrateBrush : MonoBehaviour
     [Header("Experimental Controls")]
     [Space]
 
+    public string dataFilePath;
+
     [SerializeField]
     bool hand_visible = true;
     [SerializeField]
@@ -54,7 +57,6 @@ public class CalibrateBrush : MonoBehaviour
     public Vector3 brush_rotation_offset;
 
     private Vector3 brush_offset;
-    private string dataFilePath;
 
     //########### SCANNING SETTINGS ###################################
     [Space]
@@ -102,16 +104,36 @@ public class CalibrateBrush : MonoBehaviour
 
         float timestamp = Time.time;
         Vector3 position = _tracking_dot_brush.transform.position;
-        string dataLine = $"{timestamp},{position.x},{position.y},{position.z}\n";
+        string dataLine = "";
+        if (IsSweeping)
+        {
+            dataLine = $"{timestamp},sweep,{position.x},{position.y},{position.z}\n";
+        }
+        else
+        {
+            dataLine = $"{timestamp},manual,{position.x},{position.y},{position.z}\n";
+        }
+        
         try
         {
             File.AppendAllText(dataFilePath, dataLine);
+            measured = true;
         }
         catch (Exception e)
         {
             Debug.LogError($"Failed to save data: {e.Message}");
         }
         Debug.Log("Recording Performed");
+    }
+
+    public void NextMeasurement()
+    {
+        if (measured == true)
+        {
+            string dataLine = "-,-,-,-,-\n";
+            File.AppendAllText(dataFilePath, dataLine);
+            measured = false;//so that the user cannot add more than one new line at a time.
+        }
     }
 
     public void StartScan()
@@ -217,11 +239,10 @@ public class CalibrateBrush : MonoBehaviour
         _controls = new VRControls();
 
         string fileName = "brush_stroke_data.csv";
-        dataFilePath = Path.Combine("C:\\Users\\jonathan.h.1505\\Documents\\Pilot_Data_Collection", fileName);
 
         if (!File.Exists(dataFilePath))
         {
-            string header = "Timestamp,PositionX,PositionY,PositionZ\n";
+            string header = "Timestamp,Collection Type,PositionX,PositionY,PositionZ\n";
             File.WriteAllText(dataFilePath, header);
         }
 

@@ -18,12 +18,14 @@ public class VRButtonPress : MonoBehaviour
     [SerializeField]
     private AudioClip button_out;
 
+    public GameObject offset_manger;
+
 
     private bool pressed = false; 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        
+
     }
 
     private void OnTriggerEnter(Collider other)
