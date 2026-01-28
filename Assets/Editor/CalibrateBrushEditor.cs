@@ -84,7 +84,7 @@ public class CalibrateBrushEditor : Editor
         }
 
         EditorGUILayout.Space(5);
-        if (GUILayout.Button("Next Measurement", GUILayout.Height(20)))
+        if (GUILayout.Button("Add data break", GUILayout.Height(20)))
         {
             myScript.NextMeasurement();
         }

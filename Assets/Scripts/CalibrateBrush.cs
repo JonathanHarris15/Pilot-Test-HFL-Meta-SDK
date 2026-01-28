@@ -3,6 +3,7 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using System.IO;
+using Oculus.VoiceSDK.UX;
 
 public class CalibrateBrush : MonoBehaviour
 {
@@ -15,7 +16,7 @@ public class CalibrateBrush : MonoBehaviour
     [SerializeField]
     private GameObject hand;
     [SerializeField]
-    private GameObject hand_anchor;
+    private GameObject index_finger;
 
     [SerializeField]
     private GameObject brush;
@@ -46,7 +47,6 @@ public class CalibrateBrush : MonoBehaviour
     [SerializeField]
     bool brush_visible = true;
 
-    private OVRBone _indexTipBone;
     private VRControls _controls;
 
     [Space]
@@ -113,7 +113,7 @@ public class CalibrateBrush : MonoBehaviour
         {
             dataLine = $"{timestamp},manual,{position.x},{position.y},{position.z}\n";
         }
-        
+
         try
         {
             File.AppendAllText(dataFilePath, dataLine);
@@ -132,7 +132,7 @@ public class CalibrateBrush : MonoBehaviour
         {
             string dataLine = "-,-,-,-,-\n";
             File.AppendAllText(dataFilePath, dataLine);
-            measured = false;//so that the user cannot add more than one new line at a time.
+            measured = false;
         }
     }
 
@@ -211,7 +211,6 @@ public class CalibrateBrush : MonoBehaviour
         if (isRecordHeld) FireCombo();
         else
         {
-            _indexTipBone = _skeleton.Bones.FirstOrDefault(b => b.Id == (OVRSkeleton.BoneId)bone_id);
             PerformCalibration();
         }
     }
@@ -231,6 +230,29 @@ public class CalibrateBrush : MonoBehaviour
         PerformComboAction();
     }
 
+    public void ButtonPressed()
+    {
+        if (_tracking_dot_finger == null)
+        {
+            Debug.LogWarning("Tracking dot for finger is not found.");
+            return;
+        }
+
+        float timestamp = Time.time;
+        Vector3 position = _tracking_dot_finger.transform.position;
+        string dataLine = $"{timestamp},button,{position.x},{position.y},{position.z}\n";
+
+        try
+        {
+            File.AppendAllText(dataFilePath, dataLine);
+            measured = true;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Failed to save data: {e.Message}");
+        }
+        Debug.Log("Recording Performed");
+    }
 
     //########### UNITY LIFECYCLE ###################################
 
@@ -238,15 +260,10 @@ public class CalibrateBrush : MonoBehaviour
     {
         _controls = new VRControls();
 
-        string fileName = "brush_stroke_data.csv";
-
         if (!File.Exists(dataFilePath))
         {
-            string header = "Timestamp,Collection Type,PositionX,PositionY,PositionZ\n";
-            File.WriteAllText(dataFilePath, header);
+            Debug.LogError("There is no file path for data collection");
         }
-
-        Debug.Log($"Data will be saved to: {dataFilePath}");
     }
 
     private void OnEnable()
@@ -269,7 +286,7 @@ public class CalibrateBrush : MonoBehaviour
 
     private void Initialize()
     {
-        _indexTipBone = _skeleton.Bones.FirstOrDefault(b => b.Id == (OVRSkeleton.BoneId)bone_id);
+
     }
     void Start()
     {
@@ -278,16 +295,16 @@ public class CalibrateBrush : MonoBehaviour
 
     void Update()
     {
-        if (hand == null || brush == null || _tracking_dot_finger == null || _indexTipBone == null)
+        if (hand == null || brush == null || _tracking_dot_finger == null)
         {
             return;
         }
 
-        // 1. Hand Sync (Always tracked)
-        hand.transform.position = hand_anchor.transform.position + hand_offset;
-        hand.transform.rotation = hand_anchor.transform.rotation;
+        // Hand Offset
+        hand.transform.position = hand_offset;
+        _tracking_dot_finger.transform.position = index_finger.transform.position;
 
-        // 2. Brush Logic (Tracked vs Sweeping)
+        // Brush Logic (Tracked vs Sweeping)
         if (IsSweeping)
         {
             float timeSinceStart = Time.time - _sweepStartTime;
@@ -308,38 +325,25 @@ public class CalibrateBrush : MonoBehaviour
         }
         else
         {
-            // Standard Hand Tracking
             brush.transform.localPosition = brush_offset;
             brush.transform.localRotation = Quaternion.Euler(brush_rotation_offset);
         }
 
-        // 3. Tracking Dot Sync
-        _tracking_dot_finger.transform.position = _indexTipBone.Transform.position;
-
-        // 4. Visibility
+        //  Visibility
         hand.SetActive(hand_visible);
         brush.SetActive(brush_visible);
     }
 
-    // --- VISUALIZATION: Gizmos for Scan Path ---
+    // --- VISUALIZATION: Gizmos for Scan Path & Offset ---
     private void OnDrawGizmos()
     {
-        // Draw Start Point (Green Sphere)
+        // Scan Path Gizmos
         Gizmos.color = Color.green;
         Gizmos.DrawSphere(scanStart, 0.02f);
-
-        // Draw End Point (Red Sphere)
         Gizmos.color = Color.red;
         Gizmos.DrawSphere(scanEnd, 0.02f);
-
-        // Draw Path (Yellow Line)
         Gizmos.color = Color.yellow;
         Gizmos.DrawLine(scanStart, scanEnd);
 
-        // Optional: Draw text or smaller wire spheres if you want to see them through objects
-        Gizmos.color = Color.green;
-        Gizmos.DrawWireSphere(scanStart, 0.03f);
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(scanEnd, 0.03f);
     }
 }
