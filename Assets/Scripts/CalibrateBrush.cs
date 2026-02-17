@@ -79,6 +79,7 @@ public class CalibrateBrush : MonoBehaviour
 
     //########### HELPER FUNCTIONS ###################################
 
+    //Brings the brush to the virtual hands index finger
     public void PerformCalibration()
     {
         if (_tracking_dot_brush == null || _tracking_dot_finger == null)
@@ -94,6 +95,7 @@ public class CalibrateBrush : MonoBehaviour
         Debug.Log("Calibration Performed (Position Synced)");
     }
 
+    //Logs the position of the brush point to the system.
     public void PerformRecording()
     {
         if (_tracking_dot_brush == null)

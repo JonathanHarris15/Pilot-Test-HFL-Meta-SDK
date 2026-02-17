@@ -35,7 +35,7 @@ public class VRButtonPress : MonoBehaviour
         if (!pressed){
             buttonFace.transform.localPosition += new Vector3(0, -0.01f, 0);
             pressed = true;
-            offset_manger.GetComponent<CalibrateBrush>().ButtonPressed();
+            //offset_manger.GetComponent<CalibrateBrush>().ButtonPressed();
             a_source.clip = button_in;
             a_source.Play();
         }

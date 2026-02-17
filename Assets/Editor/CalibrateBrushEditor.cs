@@ -84,6 +84,11 @@ public class CalibrateBrushEditor : Editor
         }
 
         EditorGUILayout.Space(5);
+        if (GUILayout.Button("Preform Recording", GUILayout.Height(20))){
+            myScript.PerformRecording();
+        }
+
+        EditorGUILayout.Space(5);
         if (GUILayout.Button("Add data break", GUILayout.Height(20)))
         {
             myScript.NextMeasurement();
