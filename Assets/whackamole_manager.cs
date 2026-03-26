@@ -22,7 +22,7 @@ public class whackamole_manager : MonoBehaviour
     public int n = 10; // Number of times a mole is pressed
 
     [Tooltip("The final distance the hand will slide relative to the room.")]
-    public float final_hand_offset = 500f;
+    public float final_hand_offset;
     [Tooltip("How long (in seconds) it takes the hand to reach the final offset.")]
     public float hand_offset_time = 5f;
 
@@ -59,8 +59,15 @@ public class whackamole_manager : MonoBehaviour
             // Handle hand movement
             if (hand != null && environment != null)
             {
-                // Advance the hand timer
-                hand_timer += Time.deltaTime;
+                if (is_timer_running && !is_counting_down)
+                {
+                    // Advance the hand timer
+                    hand_timer += Time.deltaTime;
+                }
+                else
+                {
+                    hand_timer = 0;
+                }
 
                 // Calculate the percentage of completion (0.0 to 1.0)
                 float t = Mathf.Clamp01(hand_timer / hand_offset_time);

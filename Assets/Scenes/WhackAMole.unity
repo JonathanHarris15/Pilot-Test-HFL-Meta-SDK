@@ -4860,7 +4860,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2321527512367231968, guid: 3f7511fbc40ae7a4b89c3298a3de199d, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2321527512367231968, guid: 3f7511fbc40ae7a4b89c3298a3de199d, type: 3}
       propertyPath: m_LocalPosition.y
@@ -5713,6 +5713,7 @@ MonoBehaviour:
   - {fileID: 683010845}
   timer_object: {fileID: 430105373}
   hand: {fileID: 1076458191}
+  environment: {fileID: 1817643591}
   n: 18
   final_hand_offset: 0.2
   hand_offset_time: 8
