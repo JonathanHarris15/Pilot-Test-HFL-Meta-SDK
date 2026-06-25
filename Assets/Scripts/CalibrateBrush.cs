@@ -1,22 +1,22 @@
-using System.Linq;
-using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using System.IO;
-using Oculus.VoiceSDK.UX;
 
+// Handles brush-to-finger calibration, hand/brush visibility, and the controller
+// input. Recording of experiment data now lives in ExperimentDataManager - the
+// controller 'Record' button routes into it (see ExecuteRecordAction).
 public class CalibrateBrush : MonoBehaviour
 {
     //########## TIMING WINDOW VARIABLES ####################################
     private const float COMBO_BUFFER_TIME = 0.1f;
     private bool comboTriggered = false;
-    private bool measured = false;
 
     //########## OBJECT REFERENCES ####################################
     [SerializeField]
     private GameObject hand;
     [SerializeField]
     private GameObject index_finger;
+    [SerializeField]
+    private GameObject button;
 
     [SerializeField]
     private GameObject brush;
@@ -40,14 +40,13 @@ public class CalibrateBrush : MonoBehaviour
     [Header("Experimental Controls")]
     [Space]
 
-    public string dataFilePath;
-
     [SerializeField]
     bool hand_visible = true;
     [SerializeField]
     bool brush_visible = true;
 
     private VRControls _controls;
+    private ExperimentDataManager _experiment;
 
     [Space]
     [Tooltip("The shift of the virtual hand from the users actual hand.")]
@@ -58,24 +57,15 @@ public class CalibrateBrush : MonoBehaviour
 
     private Vector3 brush_offset;
 
-    //########### SCANNING SETTINGS ###################################
-    [Space]
-    [Header("Scanning Automation")]
-    [Tooltip("World space position where the scan starts.")]
-    public Vector3 scanStart;
+    //########### LIVE SAMPLE VALUES (read by ExperimentDataManager) ###########
 
-    [Tooltip("World space position where the scan ends.")]
-    public Vector3 scanEnd;
+    // Calibrated brush-point X (tracking dot minus the calibration offset).
+    public float CurrentBrushX =>
+        _tracking_dot_brush != null ? _tracking_dot_brush.transform.position.x - brush_offset.x : 0f;
 
-    [Tooltip("The rotation of the brush during the automated sweep.")]
-    public Vector3 sweepRotation;
-
-    [Tooltip("How long (in seconds) the sweep takes to complete.")]
-    public float sweepDuration = 5.0f;
-
-    // State tracking for the sweep
-    public bool IsSweeping { get; private set; } = false;
-    private float _sweepStartTime;
+    // Button X position.
+    public float CurrentButtonX =>
+        button != null ? button.transform.position.x : 0f;
 
     //########### HELPER FUNCTIONS ###################################
 
@@ -93,58 +83,6 @@ public class CalibrateBrush : MonoBehaviour
 
         brush_offset = brush.transform.parent.InverseTransformPoint(targetBrushWorldPos);
         Debug.Log("Calibration Performed (Position Synced)");
-    }
-
-    //Logs the position of the brush point to the system.
-    public void PerformRecording()
-    {
-        if (_tracking_dot_brush == null)
-        {
-            Debug.LogWarning("Tracking dot is not found.");
-            return;
-        }
-
-        float timestamp = Time.time;
-        Vector3 position = _tracking_dot_brush.transform.position;
-        string dataLine = "";
-        if (IsSweeping)
-        {
-            dataLine = $"{timestamp},sweep,{position.x},{position.y},{position.z}\n";
-        }
-        else
-        {
-            dataLine = $"{timestamp},manual,{position.x},{position.y},{position.z}\n";
-        }
-
-        try
-        {
-            File.AppendAllText(dataFilePath, dataLine);
-            measured = true;
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"Failed to save data: {e.Message}");
-        }
-        Debug.Log("Recording Performed");
-    }
-
-    public void NextMeasurement()
-    {
-        if (measured == true)
-        {
-            string dataLine = "-,-,-,-,-\n";
-            File.AppendAllText(dataFilePath, dataLine);
-            measured = false;
-        }
-    }
-
-    public void StartScan()
-    {
-        if (hand == null || brush == null) return;
-
-        IsSweeping = true;
-        _sweepStartTime = Time.time;
-        Debug.Log("Scan Started");
     }
 
     public void PerformComboAction()
@@ -219,8 +157,20 @@ public class CalibrateBrush : MonoBehaviour
 
     private void ExecuteRecordAction()
     {
-        if (isCalibrateHeld) FireCombo();
-        else PerformRecording();
+        if (isCalibrateHeld)
+        {
+            FireCombo();
+            return;
+        }
+
+        if (_experiment == null)
+        {
+            Debug.LogWarning("No ExperimentDataManager on this GameObject - cannot record.");
+            return;
+        }
+
+        if (!_experiment.RecordCurrent(out string err) && !string.IsNullOrEmpty(err))
+            Debug.LogWarning(err);
     }
 
     private void FireCombo()
@@ -232,40 +182,12 @@ public class CalibrateBrush : MonoBehaviour
         PerformComboAction();
     }
 
-    public void ButtonPressed()
-    {
-        if (_tracking_dot_finger == null)
-        {
-            Debug.LogWarning("Tracking dot for finger is not found.");
-            return;
-        }
-
-        float timestamp = Time.time;
-        Vector3 position = _tracking_dot_finger.transform.position;
-        string dataLine = $"{timestamp},button,{position.x},{position.y},{position.z}\n";
-
-        try
-        {
-            File.AppendAllText(dataFilePath, dataLine);
-            measured = true;
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"Failed to save data: {e.Message}");
-        }
-        Debug.Log("Recording Performed");
-    }
-
     //########### UNITY LIFECYCLE ###################################
 
     private void Awake()
     {
         _controls = new VRControls();
-
-        if (!File.Exists(dataFilePath))
-        {
-            Debug.LogError("There is no file path for data collection");
-        }
+        _experiment = GetComponent<ExperimentDataManager>();
     }
 
     private void OnEnable()
@@ -286,15 +208,6 @@ public class CalibrateBrush : MonoBehaviour
         _controls.VRController.Record.canceled -= OnRecordReleased;
     }
 
-    private void Initialize()
-    {
-
-    }
-    void Start()
-    {
-        Invoke(nameof(Initialize), 0.5f);
-    }
-
     void Update()
     {
         if (hand == null || brush == null || _tracking_dot_finger == null)
@@ -306,46 +219,12 @@ public class CalibrateBrush : MonoBehaviour
         hand.transform.position = hand_offset;
         _tracking_dot_finger.transform.position = index_finger.transform.position;
 
-        // Brush Logic (Tracked vs Sweeping)
-        if (IsSweeping)
-        {
-            float timeSinceStart = Time.time - _sweepStartTime;
-            float percentageComplete = timeSinceStart / sweepDuration;
+        // Brush tracks the calibrated offset relative to its parent.
+        brush.transform.localPosition = brush_offset;
+        brush.transform.localRotation = Quaternion.Euler(brush_rotation_offset);
 
-            if (percentageComplete >= 1.0f)
-            {
-                // Sweep complete, reset to tracking
-                IsSweeping = false;
-                Debug.Log("Scan Complete");
-            }
-            else
-            {
-                // Perform Sweep Interpolation
-                brush.transform.position = Vector3.Lerp(scanStart, scanEnd, percentageComplete);
-                brush.transform.rotation = Quaternion.Euler(sweepRotation);
-            }
-        }
-        else
-        {
-            brush.transform.localPosition = brush_offset;
-            brush.transform.localRotation = Quaternion.Euler(brush_rotation_offset);
-        }
-
-        //  Visibility
+        // Visibility
         hand.SetActive(hand_visible);
         brush.SetActive(brush_visible);
-    }
-
-    // --- VISUALIZATION: Gizmos for Scan Path & Offset ---
-    private void OnDrawGizmos()
-    {
-        // Scan Path Gizmos
-        Gizmos.color = Color.green;
-        Gizmos.DrawSphere(scanStart, 0.02f);
-        Gizmos.color = Color.red;
-        Gizmos.DrawSphere(scanEnd, 0.02f);
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawLine(scanStart, scanEnd);
-
     }
 }
