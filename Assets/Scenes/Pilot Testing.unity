@@ -539,9 +539,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 36580bad45090e44ea5c167a788e9f4e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  table: {fileID: 0}
-  handReference: {fileID: 0}
-  contactOffset: 0
+  table: {fileID: 189692720}
+  handReference: {fileID: 49328063}
+  contactOffset: -0.86
   _originalHeight: 0
   _hasOriginal: 0
 --- !u!114 &40912055
@@ -560,6 +560,11 @@ MonoBehaviour:
   outputFolder: C:/Users/jonathan.h.1505/Documents/RHE VR Data
   participantName: 
   participantNumber: 
+--- !u!4 &49328063 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2721691953714425675, guid: 3f7511fbc40ae7a4b89c3298a3de199d, type: 3}
+  m_PrefabInstance: {fileID: 957941124}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &50092941
 GameObject:
   m_ObjectHideFlags: 0
@@ -6318,6 +6323,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1317669517487522681, guid: 3f7511fbc40ae7a4b89c3298a3de199d, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 53aa6a465818ba94884b32f5cef1a67c, type: 2}
     - target: {fileID: 2321527512367231968, guid: 3f7511fbc40ae7a4b89c3298a3de199d, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
