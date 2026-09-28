@@ -27,7 +27,6 @@ public class ExperimentControlWindow : EditorWindow
     private RecenterOnSpace _recenter;
 
     private string _numberField = "";
-    private string _nameField = "";
     private Vector2 _scroll;
 
     private GUIStyle _card, _sectionTitle, _bannerText, _subLabel;
@@ -176,7 +175,6 @@ public class ExperimentControlWindow : EditorWindow
             EditorGUILayout.EndHorizontal();
 
             _numberField = EditorGUILayout.TextField("Participant #", _numberField);
-            _nameField = EditorGUILayout.TextField("Name", _nameField);
         }
 
         EditorGUILayout.Space(4);
@@ -187,7 +185,7 @@ public class ExperimentControlWindow : EditorWindow
             {
                 if (ColorButton("Start Participant", Green, 30))
                 {
-                    if (!_mgr.StartSession(_numberField, _nameField, out string err))
+                    if (!_mgr.StartSession(_numberField, out string err))
                         EditorUtility.DisplayDialog("Cannot start session", err, "OK");
                 }
             }
@@ -196,7 +194,7 @@ public class ExperimentControlWindow : EditorWindow
         }
         else
         {
-            EditorGUILayout.LabelField("Active", $"P{_mgr.participantNumber}   {_mgr.participantName}");
+            EditorGUILayout.LabelField("Active", $"P{_mgr.participantNumber}");
             EditorGUILayout.SelectableLabel(_mgr.CurrentFilePath, EditorStyles.miniLabel, GUILayout.Height(14));
             if (GUILayout.Button("End / New Participant"))
             {
@@ -207,7 +205,6 @@ public class ExperimentControlWindow : EditorWindow
                 {
                     _mgr.EndSession();
                     _numberField = "";
-                    _nameField = "";
                 }
             }
         }

@@ -47,7 +47,6 @@ public class ExperimentDataManager : MonoBehaviour
     public string outputFolder = @"C:/Users/jonathan.h.1505/Documents/Pilot_Data_Collection";
 
     // --- Session state ---
-    public string participantName = "";
     public string participantNumber = "";
     public bool SessionActive { get; private set; }
     public string CurrentFilePath { get; private set; }
@@ -85,14 +84,12 @@ public class ExperimentDataManager : MonoBehaviour
 
     // ---------------- Session lifecycle ----------------
 
-    public bool StartSession(string number, string name, out string error)
+    public bool StartSession(string number, out string error)
     {
         error = null;
         if (string.IsNullOrWhiteSpace(number)) { error = "Participant number is required."; return false; }
-        if (string.IsNullOrWhiteSpace(name)) { error = "Participant name is required."; return false; }
 
         participantNumber = number.Trim();
-        participantName = name.Trim();
 
         try { Directory.CreateDirectory(outputFolder); }
         catch (Exception e) { error = $"Cannot create output folder:\n{e.Message}"; return false; }
@@ -109,7 +106,7 @@ public class ExperimentDataManager : MonoBehaviour
         SessionActive = true;
 
         Save(); // Write the header + empty rows immediately.
-        Debug.Log($"Session started for P{participantNumber} ({participantName}) -> {CurrentFilePath}");
+        Debug.Log($"Session started for P{participantNumber} -> {CurrentFilePath}");
         return true;
     }
 
@@ -123,7 +120,7 @@ public class ExperimentDataManager : MonoBehaviour
 
     private string BuildFilePath()
     {
-        string baseName = $"P{Sanitize(participantNumber)}_{Sanitize(participantName)}_{DateTime.Now:yyyy-MM-dd}";
+        string baseName = $"P{Sanitize(participantNumber)}_{DateTime.Now:yyyy-MM-dd}";
         string path = Path.Combine(outputFolder, baseName + ".csv");
 
         // Never silently overwrite an existing participant file.
@@ -186,7 +183,7 @@ public class ExperimentDataManager : MonoBehaviour
         try
         {
             var sb = new StringBuilder();
-            sb.AppendLine("participant_number,participant_name,trial,point,brush_x,button_x,app_time");
+            sb.AppendLine("participant_number,trial,point,brush_x,button_x,app_time");
             for (int i = 0; i < TotalSlots; i++)
             {
                 var m = _slots[i];
@@ -194,7 +191,6 @@ public class ExperimentDataManager : MonoBehaviour
                 string btn = m.recorded ? m.buttonX.ToString("F6") : "";
                 string t = m.recorded ? m.appTime.ToString("F3") : "";
                 sb.Append(CsvField(participantNumber)).Append(',')
-                  .Append(CsvField(participantName)).Append(',')
                   .Append(TrialOf(i)).Append(',')
                   .Append(PointOf(i)).Append(',')
                   .Append(brush).Append(',')
