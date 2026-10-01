@@ -303,19 +303,22 @@ public class ExperimentControlWindow : EditorWindow
             if (ColorButton("Calibrate Brush", Blue, 32))
                 _brush.PerformCalibration();
 
+            // Current hand + brush shift (both receive the same offset).
+            float offsetX = _brush.hand_offset.x;
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Label("Hand / Brush Offset X", GUILayout.Width(140));
+            Pill(offsetX.ToString("+0.00;-0.00;0.00") + " m",
+                 Mathf.Approximately(offsetX, 0f) ? Grey : Orange);
+            GUILayout.FlexibleSpace();
+            EditorGUILayout.EndHorizontal();
+
             EditorGUILayout.BeginHorizontal();
             if (ColorButton("Shift Left (-0.18)", Grey, 22))
-            {
-                Undo.RecordObject(_brush, "Shift Hand Offset Left");
-                _brush.hand_offset.x -= 0.18f;
-                if (!Application.isPlaying) EditorUtility.SetDirty(_brush);
-            }
+                SetHandOffsetX(offsetX - 0.18f, "Shift Hand Offset Left");
+            if (ColorButton("Reset (0)", Grey, 22))
+                SetHandOffsetX(0f, "Reset Hand Offset");
             if (ColorButton("Shift Right (+0.18)", Grey, 22))
-            {
-                Undo.RecordObject(_brush, "Shift Hand Offset Right");
-                _brush.hand_offset.x += 0.18f;
-                if (!Application.isPlaying) EditorUtility.SetDirty(_brush);
-            }
+                SetHandOffsetX(offsetX + 0.18f, "Shift Hand Offset Right");
             EditorGUILayout.EndHorizontal();
 
             if (ColorButton("Cycle Hand / Brush Visibility", Grey, 22))
@@ -381,6 +384,14 @@ public class ExperimentControlWindow : EditorWindow
     }
 
     // --------------------------------------------------------------------
+
+    private void SetHandOffsetX(float x, string undoName)
+    {
+        Undo.RecordObject(_brush, undoName);
+        // Round so repeated +/-0.18 steps don't accumulate float error (e.g. 0.36000001).
+        _brush.hand_offset.x = Mathf.Round(x * 1000f) / 1000f;
+        if (!Application.isPlaying) EditorUtility.SetDirty(_brush);
+    }
 
     private bool ColorButton(string label, Color color, float height)
     {

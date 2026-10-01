@@ -508,7 +508,7 @@ MonoBehaviour:
   bone_id: 10
   hand_visible: 1
   brush_visible: 1
-  hand_offset: {x: 0.18, y: 0, z: 0}
+  hand_offset: {x: 0, y: 0, z: 0}
   brush_rotation_offset: {x: -15, y: -134.8, z: 78.3}
 --- !u!114 &40912053
 MonoBehaviour:
